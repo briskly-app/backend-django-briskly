@@ -1,0 +1,4 @@
+.env
+gtfs_generic_eu/
+cities.txt
+.venv/
