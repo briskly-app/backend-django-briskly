@@ -2,3 +2,5 @@
 gtfs_generic_eu/
 cities.txt
 venv/
+*.log
+temp_images/
