@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import DestinationQuerySerializer
+from .serializers import DestinationQuerySerializer, CitySerializer
+from django.db.models import Q
 
 from routes.models import City, StopTime
 from routes.services import find_direct_connections
@@ -25,3 +26,27 @@ def get_destinations(request):
     )
 
     return Response(connections)
+
+@api_view(['GET'])
+def get_cities(request):
+    search_query = request.GET.get('q', '').strip()
+    limit = request.GET.get('limit', 20)
+
+    if limit > 10:
+        limit = 10
+
+    if not search_query:
+        return Response({"results": []})
+
+    cities = City.objects.filter(
+        Q(city_name__icontains=search_query) |
+        Q(city_region_name__icontains=search_query) |
+        Q(city_country_name__icontains=search_query) |
+        Q(city_country_code__icontains=search_query)
+    ).order_by('city_population').reverse();
+
+    cities = cities[:limit]
+
+    serializer = CitySerializer(cities, many=True)
+    
+    return Response({"results": serializer.data})

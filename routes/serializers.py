@@ -15,3 +15,8 @@ class DestinationQuerySerializer(serializers.Serializer):
         except zoneinfo.ZoneInfoNotFoundError:
             raise serializers.ValidationError("Invalid timezone provided.")
         return value
+
+class CitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        fields = ['city_id', 'city_name', 'city_region_name', 'city_country_name', 'city_country_code']
