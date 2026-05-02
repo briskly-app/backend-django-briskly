@@ -43,3 +43,31 @@ class UserTripConnectionSerializer(serializers.ModelSerializer):
             'duration_waiting', 'duration_total'
         ]
         read_only_fields = ['id']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        if instance.starting_stop:
+            representation['starting_stop'] = {
+                'stop_id': instance.starting_stop.stop_id,
+                'stop_name': instance.starting_stop.stop_name,
+                'city_id': instance.starting_stop.place.place_city.city_id,
+                'city_name': instance.starting_stop.place.place_city.city_name,
+                'region': instance.starting_stop.place.place_city.city_region_name,
+                'longitude': instance.starting_stop.stop_lon,
+                'latitude': instance.starting_stop.stop_lat,
+            }
+
+        if instance.destination_stop:
+            representation['destination_stop'] = {
+                'stop_id': instance.destination_stop.stop_id,
+                'stop_name': instance.destination_stop.stop_name,
+                'city_id': instance.destination_stop.place.place_city.city_id,
+                'city_name': instance.destination_stop.place.place_city.city_name,
+                'region': instance.destination_stop.place.place_city.city_region_name,
+                'longitude': instance.destination_stop.stop_lon,
+                'latitude': instance.destination_stop.stop_lat,
+                'thumbnail_url': instance.destination_stop.place.place_city.city_thumbnail_url,
+            }
+
+        return representation
