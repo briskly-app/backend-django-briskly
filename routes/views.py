@@ -1,9 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import DestinationQuerySerializer, CitySerializer
+from .serializers import DestinationQuerySerializer, CitySerializer, UserTripSerializer
 from django.db.models import Q
 
-from routes.models import City, StopTime
+from routes.models import City, StopTime, UserTrip
 from routes.services import find_direct_connections
 
 @api_view(['GET'])
@@ -50,3 +50,9 @@ def get_cities(request):
     serializer = CitySerializer(cities, many=True)
     
     return Response({"results": serializer.data})
+
+@api_view(['POST'])
+def create_trip(request):
+    new_trip = UserTrip.objects.create()
+    serializer = UserTripSerializer(new_trip)
+    return Response(serializer.data, status=201)

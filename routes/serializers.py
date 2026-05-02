@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import City
+from .models import City, UserTrip
 import zoneinfo
 
 class DestinationQuerySerializer(serializers.Serializer):
@@ -20,3 +20,8 @@ class CitySerializer(serializers.ModelSerializer):
     class Meta:
         model = City
         fields = ['city_id', 'city_name', 'city_region_name', 'city_country_name', 'city_country_code']
+
+class UserTripSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserTrip
+        fields = ['slug', 'name', 'start_date', 'end_date', 'thumbnail_url', 'created_at']
