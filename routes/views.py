@@ -1,9 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import DestinationQuerySerializer, CitySerializer, UserTripSerializer
+from .serializers import DestinationQuerySerializer, CitySerializer, UserTripSerializer, UserTripConnectionSerializer
 from django.db.models import Q
 
-from routes.models import City, StopTime, UserTrip
+from routes.models import City, StopTime, UserTrip, UserTripConnection
 from routes.services import find_direct_connections
 
 @api_view(['GET'])
@@ -56,3 +56,13 @@ def create_trip(request):
     new_trip = UserTrip.objects.create()
     serializer = UserTripSerializer(new_trip)
     return Response(serializer.data, status=201)
+
+@api_view(['POST'])
+def add_connection(request):
+    serializer = UserTripConnectionSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=201)
+        
+    return Response(serializer.errors, status=400)
