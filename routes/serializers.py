@@ -56,6 +56,7 @@ class UserTripConnectionSerializer(serializers.ModelSerializer):
                 'region': instance.starting_stop.place.place_city.city_region_name,
                 'longitude': instance.starting_stop.stop_lon,
                 'latitude': instance.starting_stop.stop_lat,
+                'thumbnail_url': instance.starting_stop.place.place_city.city_thumbnail_url,
             }
 
         if instance.destination_stop:

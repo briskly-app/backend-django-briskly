@@ -1,8 +1,14 @@
 from datetime import datetime, timedelta
 import zoneinfo
 from .models import Stop, StopTime, Calendar, CalendarDate
+import uuid
 
 STATIC_NUMBER_DAYS = 3
+
+def city_description_paragraphs(city):
+    if not city or not city.city_description:
+        return []
+    return [p.strip() for p in city.city_description.split('\n') if p.strip()]
 
 def parse_gtfs_time(gtfs_time_str):
     h, m, s = map(int, gtfs_time_str.split(':'))
@@ -79,6 +85,8 @@ def find_direct_connections(city, req_date, req_time, waiting_time, tz_name):
                     'origin_attraction_score': dep.stop.attractions.count(),
                     'origin_city_id': dep.stop.place.place_city.city_id,
                     'origin_city_name': dep.stop.place.place_city.city_name,
+                    'origin_city_country_code': dep.stop.place.place_city.city_country_code,
+                    'origin_city_country_name': dep.stop.place.place_city.city_country_name,
                     'origin_longitude': dep.stop.stop_lon,
                     'origin_latitude': dep.stop.stop_lat,
                     'service_date': s_date,
@@ -115,6 +123,7 @@ def find_direct_connections(city, req_date, req_time, waiting_time, tz_name):
             total_sec = waiting_sec + travel_sec
             
             results.append({
+                'id': uuid.uuid4(),
                 'trip_id': valid_trip['trip_id'],
                 'departure_date': valid_trip['departure_time'].strftime('%Y-%m-%d'),
                 'departure_time': valid_trip['departure_time'].strftime('%H:%M'),
@@ -128,6 +137,8 @@ def find_direct_connections(city, req_date, req_time, waiting_time, tz_name):
                     'stop_name': valid_trip['origin_stop_name'],
                     'city_id': valid_trip['origin_city_id'],
                     'city_name': valid_trip['origin_city_name'],
+                    'country_code': valid_trip['origin_city_country_code'],
+                    'country_name': valid_trip['origin_city_country_name'],
                     'attraction_score': valid_trip['origin_attraction_score'],
                     'longitude': valid_trip['origin_longitude'],
                     'latitude': valid_trip['origin_latitude'],
@@ -137,10 +148,15 @@ def find_direct_connections(city, req_date, req_time, waiting_time, tz_name):
                     'stop_name': dest.stop.stop_name,
                     'city_id': dest.stop.place.place_city.city_id,
                     'city_name': dest.stop.place.place_city.city_name,
+                    'country_code': dest.stop.place.place_city.city_country_code,
+                    'country_name': dest.stop.place.place_city.city_country_name,
                     'attraction_score': dest.stop.attractions.count(),
                     'longitude': dest.stop.stop_lon,
                     'latitude': dest.stop.stop_lat,
                     'thumbnail_url': dest.stop.place.place_city.city_thumbnail_url,
+                    'description_paragraphs': city_description_paragraphs(
+                        dest.stop.place.place_city
+                    ),
                     'suburb': dest.stop.place.place_suburb,
                     'region': dest.stop.place.place_city.city_region_name,
                 }
@@ -165,6 +181,8 @@ def find_direct_connections(city, req_date, req_time, waiting_time, tz_name):
         'city_id': city.city_id,
         'city_name': city.city_name,
         'region': city.city_region_name,
+        'country_code': city.city_country_code,
+        'country_name': city.city_country_name,
         'search_date': req_date.strftime('%Y-%m-%d'),
         'search_time': req_time.strftime('%H:%M'),
         'timezone': tz_name,

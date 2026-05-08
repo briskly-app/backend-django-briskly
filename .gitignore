@@ -1,4 +1,7 @@
 .env
+__pycache__/
+*.py[cod]
+
 gtfs_generic_eu/
 cities.txt
 venv/

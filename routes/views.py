@@ -31,7 +31,11 @@ def get_destinations(request):
 @api_view(['GET'])
 def get_cities(request):
     search_query = request.GET.get('q', '').strip()
-    limit = request.GET.get('limit', 20)
+
+    try:
+        limit = int(request.GET.get('limit', 20))
+    except ValueError:
+        limit = 20
 
     if limit > 10:
         limit = 10
@@ -116,9 +120,9 @@ def trip_detail(request, slug):
         if len(visited_cities) <= 2:
             name_elements = [c.city_name for c in visited_cities]
         elif len(unique_countries) > 1:
-            name_elements = unique_countries
+            name_elements = list(unique_countries)
         elif len(unique_regions) > 1:
-            name_elements = unique_regions
+            name_elements = list(unique_regions)
         else:
             name_elements = [c.city_name for c in visited_cities]
 

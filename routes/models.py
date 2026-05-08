@@ -12,6 +12,7 @@ class City(models.Model):
     city_population = models.BigIntegerField(null=True, blank=True)
     city_timezone = models.CharField(max_length=50, null=True, blank=True)
     city_thumbnail_url = models.URLField(null=True, blank=True)
+    city_description = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.city_name
