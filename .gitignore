@@ -7,3 +7,5 @@ cities.txt
 .venv/
 *.log
 temp_images/
+venv/
+db.sqlite3
