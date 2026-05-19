@@ -1,3 +1,20 @@
+# Project structure
+
+```
+apps/
+  logistics/     # GTFS, cities, stops, attractions, destination search
+  trips/         # User trips and trip connections (segments)
+core/            # Shared API exception handler, middlewares
+briskly/         # Django project settings
+```
+
+If you upgrade from the old monolithic `routes` app and tables already exist, run:
+
+```
+python manage.py migrate logistics --fake-initial
+python manage.py migrate trips --fake-initial
+```
+
 # How to run?
 
 Create environment and install libraries
@@ -29,7 +46,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-If you want to start seeder command, check them in routes/management/commands and run
+If you want to start seeder command, check them in apps/logistics/management/commands and run
 
 ```
 python manage.py [command_name] [parameters]
