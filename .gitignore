@@ -4,6 +4,6 @@ __pycache__/
 
 gtfs_generic_eu/
 cities.txt
-venv/
+.venv/
 *.log
 temp_images/
