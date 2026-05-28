@@ -13,7 +13,7 @@ class UserTripSerializer(serializers.ModelSerializer):
 class UserTripConnectionSerializer(serializers.ModelSerializer):
     user_trip = serializers.SlugRelatedField(
         slug_field='slug',
-        queryset=UserTrip.objects.all(),
+        queryset=UserTrip.objects.none(),
     )
 
     class Meta:
@@ -25,6 +25,12 @@ class UserTripConnectionSerializer(serializers.ModelSerializer):
             'duration_waiting', 'duration_total',
         ]
         read_only_fields = ['id']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            self.fields['user_trip'].queryset = UserTrip.objects.filter(user=request.user)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
