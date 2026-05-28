@@ -1,9 +1,15 @@
 import uuid
 
 from django.db import models
+from django.conf import settings
 
 
 class UserTrip(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='trips',
+    )
     slug = models.CharField(max_length=255, unique=True, blank=True)
     name = models.CharField(max_length=255, blank=True)
     start_date = models.DateField(null=True, blank=True)

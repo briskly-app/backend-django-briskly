@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.trips.api.serializers import UserTripConnectionSerializer, UserTripSerializer
@@ -9,22 +10,24 @@ from apps.trips.services import TripCompletionError, complete_user_trip
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def trips_manager(request):
     if request.method == 'GET':
-        trips = UserTrip.objects.all()
+        trips = UserTrip.objects.filter(user=request.user)
         serializer = UserTripSerializer(trips, many=True)
         return Response(serializer.data)
 
     serializer = UserTripSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        serializer.save(user=request.user)
         return Response(serializer.data, status=201)
     return Response(serializer.errors, status=400)
 
 
 @api_view(['GET', 'DELETE', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def trip_detail(request, slug):
-    trip = get_object_or_404(UserTrip, slug=slug)
+    trip = get_object_or_404(UserTrip, slug=slug, user=request.user)
 
     if request.method == 'GET':
         serializer = UserTripSerializer(trip)
@@ -44,16 +47,22 @@ def trip_detail(request, slug):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_trip_connections(request, slug):
-    trip = get_object_or_404(UserTrip, slug=slug)
+    trip = get_object_or_404(UserTrip, slug=slug, user=request.user)
     connections = trip.connections.all()
     serializer = UserTripConnectionSerializer(connections, many=True)
     return Response(serializer.data)
 
 
 @api_view(['GET', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def connection_detail(request, pk):
-    connection = get_object_or_404(UserTripConnection, pk=pk)
+    connection = get_object_or_404(
+        UserTripConnection.objects.select_related('user_trip'),
+        pk=pk,
+        user_trip__user=request.user,
+    )
 
     if request.method == 'GET':
         serializer = UserTripConnectionSerializer(connection)
@@ -64,8 +73,9 @@ def connection_detail(request, pk):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_connection(request):
-    serializer = UserTripConnectionSerializer(data=request.data)
+    serializer = UserTripConnectionSerializer(data=request.data, context={'request': request})
 
     if serializer.is_valid():
         serializer.save()
