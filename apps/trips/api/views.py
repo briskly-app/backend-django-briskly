@@ -3,12 +3,20 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from apps.trips.api.serializers import UserTripConnectionSerializer, UserTripSerializer
 from apps.trips.models import UserTrip, UserTripConnection
 from apps.trips.services import TripCompletionError, complete_user_trip
 
 
+@extend_schema(
+    request=UserTripSerializer,
+    responses={
+        200: UserTripSerializer(many=True),
+        201: UserTripSerializer,
+    },
+)
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def trips_manager(request):
@@ -24,6 +32,14 @@ def trips_manager(request):
     return Response(serializer.errors, status=400)
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: UserTripSerializer,
+        204: OpenApiResponse(description='Deleted.'),
+        400: OpenApiResponse(description='Trip completion error.'),
+    },
+)
 @api_view(['GET', 'DELETE', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def trip_detail(request, slug):
@@ -46,6 +62,10 @@ def trip_detail(request, slug):
     return Response(serializer.data)
 
 
+@extend_schema(
+    request=None,
+    responses={200: UserTripConnectionSerializer(many=True)},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_trip_connections(request, slug):
@@ -55,12 +75,19 @@ def get_trip_connections(request, slug):
     return Response(serializer.data)
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: UserTripConnectionSerializer,
+        204: OpenApiResponse(description='Deleted.'),
+    },
+)
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def connection_detail(request, pk):
+def connection_detail(request, id):
     connection = get_object_or_404(
         UserTripConnection.objects.select_related('user_trip'),
-        pk=pk,
+        pk=id,
         user_trip__user=request.user,
     )
 
@@ -72,6 +99,10 @@ def connection_detail(request, pk):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(
+    request=UserTripConnectionSerializer,
+    responses={201: UserTripConnectionSerializer},
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_connection(request):
