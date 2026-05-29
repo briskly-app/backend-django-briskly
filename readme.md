@@ -3,7 +3,7 @@
 ```
 apps/
   logistics/     # GTFS, cities, stops, attractions, destination search
-  trips/         # User trips and trip connections (segments)
+  trips/         # User trips, trip connections (segments), connection notes
 core/            # Shared API exception handler, middlewares
 briskly/         # Django project settings
 ```

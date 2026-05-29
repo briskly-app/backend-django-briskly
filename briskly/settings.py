@@ -76,6 +76,15 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'SECURITY': [{'bearerAuth': []}],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'auth'},
+        {'name': 'cities'},
+        {'name': 'connections'},
+        {'name': 'destinations'},
+        {'name': 'trips'},
+        {'name': 'notes'},
+    ],
     'COMPONENTS': {
         'SECURITY_SCHEMES': {
             'bearerAuth': {
