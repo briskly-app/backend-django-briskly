@@ -80,8 +80,9 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
         {'name': 'auth'},
         {'name': 'cities'},
-        {'name': 'connections'},
+        {'name': 'stops'},
         {'name': 'destinations'},
+        {'name': 'connections'},
         {'name': 'trips'},
         {'name': 'notes'},
     ],
