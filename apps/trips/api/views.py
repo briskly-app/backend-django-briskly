@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.http import HttpResponse
 from urllib.parse import quote
 from django.shortcuts import get_object_or_404
@@ -28,7 +29,9 @@ from apps.trips.services import (
 @permission_classes([IsAuthenticated])
 def trips_manager(request):
     if request.method == 'GET':
-        trips = UserTrip.objects.filter(user=request.user)
+        trips = UserTrip.objects.filter(user=request.user).annotate(
+            journal_entry_count=Count('connections__notes'),
+        )
         serializer = UserTripSerializer(trips, many=True)
         return Response(serializer.data)
 
