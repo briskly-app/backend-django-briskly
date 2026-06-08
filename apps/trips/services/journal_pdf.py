@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -60,6 +61,14 @@ class JournalStop:
     notes: list[dict] = field(default_factory=list)
 
 
+def build_journal_pdf_filename(trip_name: str) -> str:
+    cleaned = re.sub(r'[\\/:*?"<>|]+', '', trip_name or '').strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    if not cleaned:
+        cleaned = 'Podróż'
+    return f'Briskly - {cleaned}.pdf'
+
+
 def _register_fonts() -> None:
     regular = FONTS_DIR / 'DejaVuSans.ttf'
     bold = FONTS_DIR / 'DejaVuSans-Bold.ttf'
@@ -99,6 +108,17 @@ def _format_time(value) -> str:
 
 def _build_styles():
     styles = getSampleStyleSheet()
+    styles.add(
+        ParagraphStyle(
+            name='TitlePageBrand',
+            fontName=FONT_BOLD,
+            fontSize=14,
+            leading=18,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#0ea5e9'),
+            spaceAfter=24,
+        ),
+    )
     styles.add(
         ParagraphStyle(
             name='TitlePageName',
@@ -290,8 +310,11 @@ def _load_image_flowable(image_url: str, max_width: float, max_height: float):
 
 
 def _build_title_page(trip: UserTrip, styles, location: str) -> list:
-    story = [Spacer(1, 5 * cm)]
+    story = [Spacer(1, 4.5 * cm)]
 
+    story.append(Paragraph('Briskly', styles['TitlePageBrand']))
+    story.append(Paragraph('Dziennik podróży', styles['TitlePageMeta']))
+    story.append(Spacer(1, 1 * cm))
     story.append(Paragraph(_escape(trip.name or 'Podróż'), styles['TitlePageName']))
 
     if trip.description:
@@ -398,6 +421,8 @@ def build_journal_pdf(trip: UserTrip) -> bytes:
         )
     else:
         for index, stop in enumerate(stops, start=1):
+            if index > 1:
+                story.append(PageBreak())
             story.extend(_build_stop_section(stop, index, styles))
 
     doc.build(story)
