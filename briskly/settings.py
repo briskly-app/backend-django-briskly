@@ -144,10 +144,11 @@ WSGI_APPLICATION = 'briskly.wsgi.application'
 
 # Database
 
+# Supabase session pooler (port 5432) ma limit ~15 połączeń — nie trzymaj ich długo.
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
+        conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', '0')),
         conn_health_checks=True,
     )
 }
@@ -224,3 +225,14 @@ ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    },
+    'github': {
+        'SCOPE': ['user:email'],
+    },
+}
