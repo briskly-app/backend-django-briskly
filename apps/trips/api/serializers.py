@@ -4,6 +4,8 @@ from apps.trips.models import UserTrip, UserTripConnection
 
 
 class UserTripSerializer(serializers.ModelSerializer):
+    journal_entry_count = serializers.IntegerField(read_only=True, required=False)
+
     class Meta:
         model = UserTrip
         fields = [
@@ -14,6 +16,7 @@ class UserTripSerializer(serializers.ModelSerializer):
             'end_date',
             'thumbnail_url',
             'created_at',
+            'journal_entry_count',
         ]
         read_only_fields = ['id', 'slug', 'created_at']
 
