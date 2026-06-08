@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from urllib.parse import quote
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -8,7 +9,12 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from apps.trips.api.serializers import UserTripConnectionSerializer, UserTripSerializer
 from apps.trips.models import UserTrip, UserTripConnection
-from apps.trips.services import TripCompletionError, build_journal_pdf, complete_user_trip
+from apps.trips.services import (
+    TripCompletionError,
+    build_journal_pdf,
+    build_journal_pdf_filename,
+    complete_user_trip,
+)
 
 
 @extend_schema(
@@ -91,8 +97,13 @@ def trip_finalize(request, slug):
 def trip_journal_pdf(request, slug):
     trip = get_object_or_404(UserTrip, slug=slug, user=request.user)
     pdf_bytes = build_journal_pdf(trip)
+    filename = build_journal_pdf_filename(trip.name)
+    ascii_filename = filename.encode('ascii', 'ignore').decode().strip() or 'Briskly-podroz.pdf'
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{trip.slug}-dziennik.pdf"'
+    response['Content-Disposition'] = (
+        f'attachment; filename="{ascii_filename}"; '
+        f"filename*=UTF-8''{quote(filename)}"
+    )
     return response
 
 
