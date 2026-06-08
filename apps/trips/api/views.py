@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -7,7 +8,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from apps.trips.api.serializers import UserTripConnectionSerializer, UserTripSerializer
 from apps.trips.models import UserTrip, UserTripConnection
-from apps.trips.services import TripCompletionError, complete_user_trip
+from apps.trips.services import TripCompletionError, build_journal_pdf, complete_user_trip
 
 
 @extend_schema(
@@ -77,6 +78,22 @@ def trip_finalize(request, slug):
 
     serializer = UserTripSerializer(trip)
     return Response(serializer.data)
+
+
+@extend_schema(
+    request=None,
+    responses={
+        200: OpenApiResponse(description='Journal PDF file.'),
+    },
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def trip_journal_pdf(request, slug):
+    trip = get_object_or_404(UserTrip, slug=slug, user=request.user)
+    pdf_bytes = build_journal_pdf(trip)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{trip.slug}-dziennik.pdf"'
+    return response
 
 
 @extend_schema(
