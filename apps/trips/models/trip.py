@@ -12,6 +12,7 @@ class UserTrip(models.Model):
     )
     slug = models.CharField(max_length=255, unique=True, blank=True)
     name = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True, default='')
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     thumbnail_url = models.URLField(null=True, blank=True)

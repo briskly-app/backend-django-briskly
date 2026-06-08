@@ -215,20 +215,18 @@ def get_cities(request):
     except ValueError:
         limit = 20
 
-    if limit > 10:
-        limit = 10
+    if limit > 50:
+        limit = 50
 
     if not search_query:
-        return Response({'results': []})
-
-    cities = City.objects.filter(
-        Q(city_name__icontains=search_query)
-        | Q(city_region_name__icontains=search_query)
-        | Q(city_country_name__icontains=search_query)
-        | Q(city_country_code__icontains=search_query),
-    ).order_by('-city_population')
-
-    cities = cities[:limit]
+        cities = City.objects.order_by('-city_population')[:limit]
+    else:
+        cities = City.objects.filter(
+            Q(city_name__icontains=search_query)
+            | Q(city_region_name__icontains=search_query)
+            | Q(city_country_name__icontains=search_query)
+            | Q(city_country_code__icontains=search_query),
+        ).order_by('-city_population')[:limit]
     serializer = CitySerializer(cities, many=True)
 
     return Response({'results': serializer.data})

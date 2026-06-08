@@ -33,11 +33,10 @@ def trips_manager(request):
 
 
 @extend_schema(
-    request=None,
+    request=UserTripSerializer,
     responses={
         200: UserTripSerializer,
         204: OpenApiResponse(description='Deleted.'),
-        400: OpenApiResponse(description='Trip completion error.'),
     },
 )
 @api_view(['GET', 'DELETE', 'PATCH'])
@@ -53,10 +52,28 @@ def trip_detail(request, slug):
         trip.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    serializer = UserTripSerializer(trip, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
+
+
+@extend_schema(
+    request=None,
+    responses={
+        200: UserTripSerializer,
+        400: OpenApiResponse(description='Trip completion error.'),
+    },
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trip_finalize(request, slug):
+    trip = get_object_or_404(UserTrip, slug=slug, user=request.user)
+
     try:
         complete_user_trip(trip)
     except TripCompletionError as exc:
-        return Response({"error": exc.message}, status=exc.status_code)
+        return Response({'error': exc.message}, status=exc.status_code)
 
     serializer = UserTripSerializer(trip)
     return Response(serializer.data)
@@ -76,13 +93,13 @@ def get_trip_connections(request, slug):
 
 
 @extend_schema(
-    request=None,
+    request=UserTripConnectionSerializer,
     responses={
         200: UserTripConnectionSerializer,
         204: OpenApiResponse(description='Deleted.'),
     },
 )
-@api_view(['GET', 'DELETE'])
+@api_view(['GET', 'DELETE', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def connection_detail(request, id):
     connection = get_object_or_404(
@@ -95,8 +112,19 @@ def connection_detail(request, id):
         serializer = UserTripConnectionSerializer(connection)
         return Response(serializer.data)
 
-    connection.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    if request.method == 'DELETE':
+        connection.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = UserTripConnectionSerializer(
+        connection,
+        data=request.data,
+        partial=True,
+        context={'request': request},
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
 
 
 @extend_schema(
