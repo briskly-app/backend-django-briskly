@@ -6,6 +6,7 @@ from apps.trips.api.notes import views as note_views
 urlpatterns = [
     path('trips/', views.trips_manager, name='trips-manager'),
     path('trips/<slug:slug>/', views.trip_detail, name='trip-detail'),
+    path('trips/<slug:slug>/finalize/', views.trip_finalize, name='trip-finalize'),
     path('trips/<slug:slug>/connections/', views.get_trip_connections, name='trip-connections-list'),
     path('connections/', views.add_connection, name='add_connection'),
     path('connections/<int:id>/', views.connection_detail, name='connection-detail'),

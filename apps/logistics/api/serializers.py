@@ -57,6 +57,8 @@ class CitySerializer(serializers.ModelSerializer):
             'city_region_name',
             'city_country_name',
             'city_country_code',
+            'city_lat',
+            'city_long',
         ]
 
 

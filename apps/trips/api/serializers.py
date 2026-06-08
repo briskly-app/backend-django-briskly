@@ -6,7 +6,15 @@ from apps.trips.models import UserTrip, UserTripConnection
 class UserTripSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserTrip
-        fields = ['slug', 'name', 'start_date', 'end_date', 'thumbnail_url', 'created_at']
+        fields = [
+            'slug',
+            'name',
+            'description',
+            'start_date',
+            'end_date',
+            'thumbnail_url',
+            'created_at',
+        ]
         read_only_fields = ['id', 'slug', 'created_at']
 
 
