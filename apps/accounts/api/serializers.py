@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -22,21 +23,28 @@ def build_auth_response(user):
     }
 
 
-class UsernamePasswordLoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+class EmailPasswordLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        username = attrs.get('username', '')
+        email = attrs.get('email', '').strip().lower()
         password = attrs.get('password', '')
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            user = User.objects.filter(username__iexact=email).first()
+
+        if user is None:
+            raise AuthenticationFailed('Nieprawidłowy e-mail lub hasło.')
 
         authenticated = authenticate(
             request=self.context.get('request'),
-            username=username,
+            username=user.get_username(),
             password=password,
         )
         if authenticated is None:
-            raise serializers.ValidationError({'username': 'Invalid credentials.'})
+            raise AuthenticationFailed('Nieprawidłowy e-mail lub hasło.')
 
         return build_auth_response(authenticated)
 

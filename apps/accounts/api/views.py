@@ -7,10 +7,10 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from apps.accounts.api.serializers import (
+    EmailPasswordLoginSerializer,
     MeSerializer,
     MeUpdateSerializer,
     RegisterSerializer,
-    UsernamePasswordLoginSerializer,
     build_auth_response,
 )
 from apps.trips.services.stats import build_user_dashboard_stats
@@ -20,7 +20,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        request=UsernamePasswordLoginSerializer,
+        request=EmailPasswordLoginSerializer,
         responses={
             200: OpenApiResponse(
                 description='JWT token pair (access/refresh) + user payload.',
@@ -28,7 +28,7 @@ class LoginView(APIView):
         },
     )
     def post(self, request):
-        serializer = UsernamePasswordLoginSerializer(
+        serializer = EmailPasswordLoginSerializer(
             data=request.data,
             context={'request': request},
         )
