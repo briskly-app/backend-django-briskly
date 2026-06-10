@@ -118,7 +118,10 @@ def trip_journal_pdf(request, slug):
 @permission_classes([IsAuthenticated])
 def get_trip_connections(request, slug):
     trip = get_object_or_404(UserTrip, slug=slug, user=request.user)
-    connections = trip.connections.all()
+    connections = trip.connections.select_related(
+        'starting_stop__place__place_city',
+        'destination_stop__place__place_city',
+    )
     serializer = UserTripConnectionSerializer(connections, many=True)
     return Response(serializer.data)
 
