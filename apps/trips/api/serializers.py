@@ -1,6 +1,37 @@
 from rest_framework import serializers
 
+from apps.logistics.services.attractiveness import city_description_paragraphs
 from apps.trips.models import UserTrip, UserTripConnection
+
+
+def _serialize_connection_stop(stop):
+    if not stop:
+        return None
+
+    city = stop.place.place_city if stop.place else None
+    payload = {
+        'stop_id': stop.stop_id,
+        'stop_name': stop.stop_name,
+        'longitude': stop.stop_lon,
+        'latitude': stop.stop_lat,
+    }
+
+    if city:
+        payload.update(
+            {
+                'city_id': city.city_id,
+                'city_name': city.city_name,
+                'region': city.city_region_name,
+                'country_name': city.city_country_name,
+                'country_code': city.city_country_code,
+                'thumbnail_url': city.city_thumbnail_url,
+                'city_population': city.city_population,
+                'city_description': city.city_description,
+                'description_paragraphs': city_description_paragraphs(city),
+            },
+        )
+
+    return payload
 
 
 class UserTripSerializer(serializers.ModelSerializer):
@@ -46,28 +77,7 @@ class UserTripConnectionSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        if instance.starting_stop:
-            representation['starting_stop'] = {
-                'stop_id': instance.starting_stop.stop_id,
-                'stop_name': instance.starting_stop.stop_name,
-                'city_id': instance.starting_stop.place.place_city.city_id,
-                'city_name': instance.starting_stop.place.place_city.city_name,
-                'region': instance.starting_stop.place.place_city.city_region_name,
-                'longitude': instance.starting_stop.stop_lon,
-                'latitude': instance.starting_stop.stop_lat,
-                'thumbnail_url': instance.starting_stop.place.place_city.city_thumbnail_url,
-            }
-
-        if instance.destination_stop:
-            representation['destination_stop'] = {
-                'stop_id': instance.destination_stop.stop_id,
-                'stop_name': instance.destination_stop.stop_name,
-                'city_id': instance.destination_stop.place.place_city.city_id,
-                'city_name': instance.destination_stop.place.place_city.city_name,
-                'region': instance.destination_stop.place.place_city.city_region_name,
-                'longitude': instance.destination_stop.stop_lon,
-                'latitude': instance.destination_stop.stop_lat,
-                'thumbnail_url': instance.destination_stop.place.place_city.city_thumbnail_url,
-            }
+        representation['starting_stop'] = _serialize_connection_stop(instance.starting_stop)
+        representation['destination_stop'] = _serialize_connection_stop(instance.destination_stop)
 
         return representation

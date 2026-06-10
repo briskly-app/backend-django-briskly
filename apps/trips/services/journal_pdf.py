@@ -24,6 +24,8 @@ from reportlab.platypus import (
     Spacer,
 )
 
+from apps.logistics.models import City
+from apps.logistics.services.attractiveness import city_description_paragraphs
 from apps.trips.models import UserTrip, UserTripConnectionNote
 from apps.trips.services.note_codec import decode_note_html
 
@@ -55,9 +57,12 @@ CONTENT_WIDTH = PAGE_WIDTH - 4 * cm
 class JournalStop:
     stop_id: str
     title: str
-    subtitle: str
-    date_label: str
-    time_label: str
+    city_name: str
+    stay_range_label: str
+    arrival_label: str
+    departure_label: str
+    city_image_url: str
+    city_description: str
     notes: list[dict] = field(default_factory=list)
 
 
@@ -106,6 +111,50 @@ def _format_time(value) -> str:
     return str(value)[:5]
 
 
+def _format_arrival_departure_line(kind: str, day, time) -> str:
+    parts = []
+    if time:
+        parts.append(_format_time(time))
+    if day:
+        parts.append(_format_pl_date(day))
+    if not parts:
+        return ''
+    return f'{kind}: {" ".join(parts)}'
+
+
+def _format_stay_range(arrival_day, departure_day) -> str:
+    if not arrival_day and not departure_day:
+        return ''
+    if arrival_day and departure_day:
+        if arrival_day == departure_day:
+            return _format_pl_date(arrival_day)
+        if (
+            arrival_day.year == departure_day.year
+            and arrival_day.month == departure_day.month
+        ):
+            return (
+                f'{arrival_day.day}–{departure_day.day} '
+                f'{MONTHS_PL[arrival_day.month]} {arrival_day.year}'
+            )
+        return f'{_format_pl_date(arrival_day)} – {_format_pl_date(departure_day)}'
+    if arrival_day:
+        return f'od {_format_pl_date(arrival_day)}'
+    return f'do {_format_pl_date(departure_day)}'
+
+
+def _city_for_stop(stop) -> City | None:
+    if not stop or not stop.place:
+        return None
+    return stop.place.place_city
+
+
+def _city_description_text(city: City | None, max_paragraphs: int = 3) -> str:
+    if not city:
+        return ''
+    paragraphs = city_description_paragraphs(city)[:max_paragraphs]
+    return '\n\n'.join(paragraphs)
+
+
 def _build_styles():
     styles = getSampleStyleSheet()
     styles.add(
@@ -145,10 +194,20 @@ def _build_styles():
         ParagraphStyle(
             name='StopHeading',
             fontName=FONT_BOLD,
-            fontSize=18,
-            leading=22,
+            fontSize=22,
+            leading=26,
             textColor=colors.HexColor('#0f172a'),
-            spaceAfter=4,
+            spaceAfter=6,
+        ),
+    )
+    styles.add(
+        ParagraphStyle(
+            name='StayRange',
+            fontName=FONT_BOLD,
+            fontSize=13,
+            leading=18,
+            textColor=colors.HexColor('#0f172a'),
+            spaceAfter=6,
         ),
     )
     styles.add(
@@ -158,7 +217,28 @@ def _build_styles():
             fontSize=11,
             leading=15,
             textColor=colors.HexColor('#64748b'),
-            spaceAfter=12,
+            spaceAfter=4,
+        ),
+    )
+    styles.add(
+        ParagraphStyle(
+            name='CityDescription',
+            fontName=FONT_REGULAR,
+            fontSize=10,
+            leading=15,
+            textColor=colors.HexColor('#475569'),
+            spaceAfter=16,
+        ),
+    )
+    styles.add(
+        ParagraphStyle(
+            name='NotesSectionHeading',
+            fontName=FONT_BOLD,
+            fontSize=13,
+            leading=17,
+            textColor=colors.HexColor('#1e293b'),
+            spaceBefore=8,
+            spaceAfter=10,
         ),
     )
     styles.add(
@@ -232,58 +312,96 @@ def _note_to_entry(note: UserTripConnectionNote, connection) -> dict:
     }
 
 
+def _build_journal_stop(
+    stop,
+    *,
+    arrival_day=None,
+    arrival_time=None,
+    departure_day=None,
+    departure_time=None,
+) -> JournalStop:
+    city = _city_for_stop(stop)
+    city_name = city.city_name if city else ''
+    stop_name = stop.stop_name if stop else ''
+    display_name = city_name or stop_name
+
+    stay_range = ''
+    if arrival_day and departure_day:
+        stay_range = _format_stay_range(arrival_day, departure_day)
+
+    return JournalStop(
+        stop_id=f'stop-{stop.stop_id}',
+        title=stop_name,
+        city_name=display_name,
+        stay_range_label=stay_range,
+        arrival_label=_format_arrival_departure_line('Przyjazd', arrival_day, arrival_time),
+        departure_label=_format_arrival_departure_line('Wyjazd', departure_day, departure_time),
+        city_image_url=city.city_thumbnail_url if city and city.city_thumbnail_url else '',
+        city_description=_city_description_text(city),
+    )
+
+
 def _collect_journal_stops(trip: UserTrip) -> list[JournalStop]:
-    connections = (
+    connections = list(
         trip.connections.select_related(
             'starting_stop__place__place_city',
             'destination_stop__place__place_city',
         )
         .prefetch_related('notes')
-        .order_by('id')
+        .order_by('id'),
     )
 
     if not connections:
         return []
 
-    stops: list[JournalStop] = []
-    notes_by_stop: dict[str, list[dict]] = {}
-
-    first = connections[0]
-    starting = first.starting_stop
-    starting_city = starting.place.place_city if starting.place else None
-    stops.append(
-        JournalStop(
-            stop_id=f'stop-{starting.stop_id}',
-            title=starting.stop_name,
-            subtitle=starting_city.city_name if starting_city else '',
-            date_label=_format_pl_date(first.departure_date),
-            time_label=_format_time(first.departure_time),
-        ),
-    )
+    arrivals: dict[str, tuple] = {}
+    departures: dict[str, tuple] = {}
+    ordered_stop_ids: list[str] = []
+    stops_by_id: dict[str, object] = {}
 
     for connection in connections:
-        destination = connection.destination_stop
-        dest_city = destination.place.place_city if destination.place else None
-        stop_id = f'stop-{destination.stop_id}'
-        stops.append(
-            JournalStop(
-                stop_id=stop_id,
-                title=destination.stop_name,
-                subtitle=dest_city.city_name if dest_city else '',
-                date_label=_format_pl_date(connection.arrival_date),
-                time_label=_format_time(connection.arrival_time),
-            ),
-        )
+        starting = connection.starting_stop
+        if starting:
+            start_key = starting.stop_id
+            if start_key not in stops_by_id:
+                ordered_stop_ids.append(start_key)
+                stops_by_id[start_key] = starting
+            departures[start_key] = (connection.departure_date, connection.departure_time)
 
+        destination = connection.destination_stop
+        if not destination:
+            continue
+
+        dest_key = destination.stop_id
+        if dest_key not in stops_by_id:
+            ordered_stop_ids.append(dest_key)
+            stops_by_id[dest_key] = destination
+
+        arrivals[dest_key] = (connection.arrival_date, connection.arrival_time)
+
+    notes_by_stop: dict[str, list[dict]] = {}
+    for connection in connections:
         for note in connection.notes.all():
             entry = _note_to_entry(note, connection)
             notes_by_stop.setdefault(entry['stop_id'], []).append(entry)
 
-    for stop in stops:
-        stop.notes = sorted(
-            notes_by_stop.get(stop.stop_id, []),
+    stops: list[JournalStop] = []
+    for stop_key in ordered_stop_ids:
+        stop = stops_by_id[stop_key]
+        arrival = arrivals.get(stop_key)
+        departure = departures.get(stop_key)
+        journal_stop = _build_journal_stop(
+            stop,
+            arrival_day=arrival[0] if arrival else None,
+            arrival_time=arrival[1] if arrival else None,
+            departure_day=departure[0] if departure else None,
+            departure_time=departure[1] if departure else None,
+        )
+        journal_stop.notes = sorted(
+            notes_by_stop.get(journal_stop.stop_id, []),
             key=lambda item: item['sort_order'],
         )
+        stops.append(journal_stop)
 
     return stops
 
@@ -341,25 +459,39 @@ def _build_title_page(trip: UserTrip, styles, location: str) -> list:
     return story
 
 
-def _build_stop_section(stop: JournalStop, index: int, styles) -> list:
-    story = [
-        Paragraph(f'Przystanek {index}: {_escape(stop.title)}', styles['StopHeading']),
-        Paragraph(
-            _escape(
-                ' • '.join(
-                    part
-                    for part in [stop.subtitle, stop.date_label, stop.time_label]
-                    if part
-                ),
-            ),
-            styles['StopMeta'],
-        ),
+def _build_stop_section(stop: JournalStop, styles) -> list:
+    story = [Paragraph(_escape(stop.city_name), styles['StopHeading'])]
+
+    if stop.stay_range_label:
+        story.append(Paragraph(_escape(stop.stay_range_label), styles['StayRange']))
+
+    schedule_lines = [
+        line for line in [stop.arrival_label, stop.departure_label] if line
     ]
+    for line in schedule_lines:
+        story.append(Paragraph(_escape(line), styles['StopMeta']))
+
+    if stop.title and stop.title != stop.city_name:
+        story.append(
+            Paragraph(_escape(f'Przystanek: {stop.title}'), styles['StopMeta']),
+        )
+
+    story.append(Spacer(1, 0.3 * cm))
+
+    if stop.city_image_url:
+        image = _load_image_flowable(stop.city_image_url, CONTENT_WIDTH, 8 * cm)
+        if image:
+            story.append(image)
+            story.append(Spacer(1, 0.4 * cm))
+
+    if stop.city_description:
+        story.append(Paragraph(_escape(stop.city_description), styles['CityDescription']))
 
     if not stop.notes:
-        story.append(Paragraph('Brak notatek dla tego przystanku.', styles['NoteBody']))
-        story.append(Spacer(1, 0.5 * cm))
+        story.append(Spacer(1, 0.6 * cm))
         return story
+
+    story.append(Paragraph('Notatki', styles['NotesSectionHeading']))
 
     for note in stop.notes:
         meta_parts = [
@@ -396,7 +528,7 @@ def build_journal_pdf(trip: UserTrip) -> bytes:
     _register_fonts()
     styles = _build_styles()
     stops = _collect_journal_stops(trip)
-    location = stops[-1].subtitle if stops else ''
+    location = stops[-1].city_name if stops else ''
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -423,7 +555,7 @@ def build_journal_pdf(trip: UserTrip) -> bytes:
         for index, stop in enumerate(stops, start=1):
             if index > 1:
                 story.append(PageBreak())
-            story.extend(_build_stop_section(stop, index, styles))
+            story.extend(_build_stop_section(stop, styles))
 
     doc.build(story)
     buffer.seek(0)
