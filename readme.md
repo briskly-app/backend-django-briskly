@@ -35,13 +35,13 @@ After that you have nice summary with all important details and you can export i
 # Structure and Data
 
 Data is stored in cloud-based service Supabase with all S3 files (mainly city images)
-React Native - Mobile app is available here: https://github.com/briskly-app/mobile-briskly
-React - Frontend app written by Skiperpol is available here: https://github.com/Skiperpol/frontend-briskly
+- React Native - Mobile app is available here: https://github.com/briskly-app/mobile-briskly
+- React - Frontend app written by Skiperpol is available here: https://github.com/Skiperpol/frontend-briskly
 
-GTFS buses schedule for 2026 from flixbus: https://www.transit.land/feeds/f-u-flixbus
-Cities Information: https://download.geonames.org/export/dump/
-Attractions for cities and towns: https://nominatim.org/
-Images: https://pypi.org/project/Wikipedia-API/ and https://unsplash.com/developers
+- GTFS buses schedule for 2026 from flixbus: https://www.transit.land/feeds/f-u-flixbus
+- Cities Information: https://download.geonames.org/export/dump/
+- Attractions for cities and towns: https://nominatim.org/
+- Images: https://pypi.org/project/Wikipedia-API/ and https://unsplash.com/developers
 
 # How to run?
 
